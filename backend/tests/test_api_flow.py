@@ -31,6 +31,11 @@ def test_requires_auth(client):
     assert client.get("/api/companies").status_code == 401
 
 
+def test_bearer_token_is_not_accepted_in_query_string(client, auth_headers):
+    token = auth_headers["Authorization"].split(" ", 1)[1]
+    assert client.get(f"/api/companies?token={token}").status_code == 401
+
+
 def test_company_crud_and_tenant_isolation(client, auth_headers):
     company_id = make_company(client, auth_headers)
     resp = client.get(f"/api/companies/{company_id}", headers=auth_headers)
