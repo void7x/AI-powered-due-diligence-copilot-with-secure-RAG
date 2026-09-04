@@ -14,6 +14,6 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 @router.get("/{job_id}", response_model=JobOut)
 def get_job(job_id: str, user: User = Depends(get_current_user)):
     job = get_job_manager().get(job_id)
-    if job is None:
+    if job is None or job.owner_user_id != user.id:
         raise NotFoundError("Job not found.")
     return JobOut(**job.as_dict())
