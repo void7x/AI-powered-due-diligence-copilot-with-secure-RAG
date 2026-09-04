@@ -60,15 +60,27 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
   return handle(res) as Promise<T>;
 }
 
+export async function apiFile(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}${path}`, { headers });
+  if (!res.ok) {
+    await handle(res);
+    throw new ApiError(res.status, "http_error", `Request failed (${res.status})`);
+  }
+  return res.blob();
+}
+
 export const apiGet = <T = unknown>(path: string) => api<T>(path);
 export const apiPost = <T = unknown>(path: string, body?: unknown) =>
   api<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 export const apiPatch = <T = unknown>(path: string, body: unknown) =>
   api<T>(path, { method: "PATCH", body: JSON.stringify(body) });
-export const apiDelete = (path: string) => api<void>(path, { method: "DELETE" });
+export const apiDelete = (path: string) => api<void>(path);
 
-export function fileUrl(documentId: string, token: string | null): string {
-  return `${API_URL}/api/documents/${documentId}/file?token=${token ?? ""}`;
+export function fileUrl(documentId: string): string {
+  return `${API_URL}/api/documents/${documentId}/file`;
 }
 
 export async function uploadFiles(companyId: string, files: File[], params?: { document_type?: string; fiscal_year?: string }): Promise<DocumentItem_inferred[]> {
