@@ -65,8 +65,7 @@ async def upload_documents(company_id: str,
         db.commit()
         db.refresh(doc)
         created.append(doc)
-        # auto-start processing in the background
-        job = get_job_manager().create("document_process", PROCESS_STEPS)
+        job = get_job_manager().create("document_process", PROCESS_STEPS, owner_user_id=user.id)
         get_job_manager().start(job, lambda j, doc_id=doc.id: process_document_sync(doc_id))
         log.info("document uploaded", extra={"document_id": doc.id,
                                              "company_id": company.id, "user_id": user.id})
@@ -113,14 +112,15 @@ def delete_document(db: Session = Depends(get_db), doc: Document = Depends(get_s
 
 
 @router.post("/documents/{document_id}/process", response_model=DocumentStatusOut)
-def reprocess_document(db: Session = Depends(get_db), doc: Document = Depends(get_scoped_document)):
+def reprocess_document(db: Session = Depends(get_db), doc: Document = Depends(get_scoped_document),
+                       user: User = Depends(get_current_user)):
     if doc.status in (DocumentStatus.PROCESSING.value, DocumentStatus.EXTRACTING.value,
                       DocumentStatus.CHUNKING.value, DocumentStatus.EMBEDDING.value):
         raise BadRequestError("Document is already being processed.")
     doc.status = DocumentStatus.UPLOADED.value
     doc.error_message = ""
     db.commit()
-    job = get_job_manager().create("document_process", PROCESS_STEPS)
+    job = get_job_manager().create("document_process", PROCESS_STEPS, owner_user_id=user.id)
     get_job_manager().start(job, lambda j: process_document_sync(doc.id))
     return DocumentStatusOut(id=doc.id, status=doc.status, page_count=doc.page_count)
 
