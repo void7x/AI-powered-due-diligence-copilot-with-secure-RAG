@@ -33,3 +33,4 @@ backend/data/*.db
 .idea/
 .vscode/
 *.log
+data/app.db
