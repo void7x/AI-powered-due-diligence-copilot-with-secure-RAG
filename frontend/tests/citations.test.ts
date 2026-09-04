@@ -9,15 +9,15 @@ import type { ChatAnswer, Citation } from "@/types";
 describe("citation contract", () => {
   it("citations carry document + page for each source id", () => {
     const citations: Citation[] = [
-      { source_id: 1, document_id: "d1", document_name: "Annual Report FY2025.pdf", page_number: 5, quote: "Total revenue 630.4" },
-      { source_id: 2, document_id: "d2", document_name: "Deck.pdf", page_number: 2, quote: "Top 3 customers 44%" },
+      { source_id: "1", document_id: "d1", document_name: "Annual Report FY2025.pdf", page_number: 5, quote: "Total revenue 630.4", section: "", relevance: 1 },
+      { source_id: "2", document_id: "d2", document_name: "Deck.pdf", page_number: 2, quote: "Top 3 customers 44%", section: "", relevance: 1 },
     ];
     const answer: ChatAnswer = {
       answer: "Revenue was 630.4 [1].",
       confidence: "high",
       claims: [
-        { text: "Revenue was 630.4", type: "fact", sources: [1] },
-        { text: "Customer concentration is high", type: "analysis", sources: [2] },
+        { text: "Revenue was 630.4", type: "fact", sources: ["1"] },
+        { text: "Customer concentration is high", type: "analysis", sources: ["2"] },
       ],
       citations,
       insufficient_evidence: false,
