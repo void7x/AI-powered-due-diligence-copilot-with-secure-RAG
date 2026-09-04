@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+import secrets
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]   # backend/
@@ -23,10 +24,12 @@ class Settings(BaseSettings):
 
     app_name: str = "AI Due Diligence Copilot"
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False
 
     # Security
-    secret_key: str = Field(default="dev-insecure-secret-change-me")
+    # In development/tests, an ephemeral key is generated when SECRET_KEY is absent.
+    # Production-like environments must provide an explicit secret.
+    secret_key: str | None = Field(default=None)
     access_token_expire_minutes: int = 720
 
     # Database (PostgreSQL + pgvector in production; SQLite fallback for dev/tests)
@@ -66,9 +69,28 @@ class Settings(BaseSettings):
     interest_to_ebitda_threshold: float = 0.30
 
     # Demo bootstrap (development convenience)
-    create_demo_user: bool = True
+    create_demo_user: bool = False
     demo_email: str = "demo@example.com"
-    demo_password: str = "demo1234"
+    demo_password: str = ""
+
+    @model_validator(mode="after")
+    def validate_security_settings(self) -> "Settings":
+        environment = self.environment.strip().lower()
+        production_like = environment in {"production", "prod", "staging"}
+
+        if self.secret_key is not None:
+            self.secret_key = self.secret_key.strip()
+
+        if production_like and not self.secret_key:
+            raise ValueError("SECRET_KEY must be explicitly configured in production-like environments")
+
+        if not self.secret_key:
+            self.secret_key = secrets.token_urlsafe(32)
+
+        if self.create_demo_user and not self.demo_password:
+            raise ValueError("DEMO_PASSWORD must be configured when CREATE_DEMO_USER=true")
+
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:
