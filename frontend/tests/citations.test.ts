@@ -23,6 +23,7 @@ describe("citation contract", () => {
       insufficient_evidence: false,
       session_id: "s1",
       message_id: "m1",
+      provider: "offline",
     };
     for (const claim of answer.claims) {
       for (const sid of claim.sources) {
