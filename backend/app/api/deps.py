@@ -15,8 +15,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     auth = request.headers.get("Authorization", "")
     token = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
     if not token:
-        token = request.query_params.get("token", "")   # enables <img>/<iframe>/PDF viewing
-    if not token:
         raise UnauthorizedError("Missing authentication token.")
     try:
         payload = decode_access_token(token, get_settings().secret_key)
