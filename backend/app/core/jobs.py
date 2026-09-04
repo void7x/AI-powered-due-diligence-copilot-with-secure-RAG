@@ -22,9 +22,10 @@ class Job:
     id: str
     kind: str
     steps: list[str]
-    status: str = "running"          # running | succeeded | failed
+    owner_user_id: str
+    status: str = "running"
     current_step: str = ""
-    progress: int = 0                # 0..100
+    progress: int = 0
     result: Any = None
     error: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -43,8 +44,8 @@ class JobManager:
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
 
-    def create(self, kind: str, steps: list[str]) -> Job:
-        job = Job(id=uuid.uuid4().hex[:16], kind=kind, steps=steps)
+    def create(self, kind: str, steps: list[str], *, owner_user_id: str) -> Job:
+        job = Job(id=uuid.uuid4().hex[:16], kind=kind, steps=steps, owner_user_id=owner_user_id)
         with self._lock:
             self._jobs[job.id] = job
         return job
