@@ -146,7 +146,7 @@ def document_pages(page: int | None = Query(default=None, ge=1),
 
 @router.get("/documents/{document_id}/file")
 def document_file(doc: Document = Depends(get_scoped_document)):
-    """Raw stored file (token via ?token= enables PDF viewer embedding)."""
+    """Serve the original file using header-based authentication."""
 
     path = pathlib.Path(doc.storage_path)
     if not path.exists():
