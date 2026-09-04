@@ -47,14 +47,16 @@ flowchart TD
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env          # set SECRET_KEY; add OPENAI_API_KEY optionally
+cp .env.example .env
 docker compose up --build
 # frontend  → http://localhost:3000
 # API docs  → http://localhost:8000/docs
-# login     → demo@example.com / demo1234
+# demo login → demo@example.com / demo1234
 ```
 
-The backend container runs migrations and seeds a synthetic demo company (**Aurora Industrial Group** — growth, rising debt, margin decline, customer concentration, an expansion opportunity, and a deliberate two-document contradiction) automatically.
+The checked-in `.env.example` is configured for a **local/demo deployment**: it supplies working Docker database credentials, creates the demo user, and enables the synthetic demo-data seed. Change these values and disable demo seeding for staging/production. The Docker backend runs migrations automatically before starting the API.
+
+The demo seed creates **Aurora Industrial Group** with synthetic filings covering growth, rising debt, margin decline, customer concentration, an expansion opportunity, and a deliberate two-document contradiction.
 
 ## Local development (no Docker)
 
@@ -63,7 +65,7 @@ The backend container runs migrations and seeds a synthetic demo company (**Auro
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env                 # SQLite fallback works out of the box
+cp ../.env.example .env                 # change DATABASE_URL to the SQLite fallback if desired
 alembic upgrade head
 python -m app.seed                      # demo user + synthetic company
 uvicorn app.main:app --reload --port 8000
@@ -74,6 +76,8 @@ npm install
 cp .env.example .env.local              # NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run dev                             # http://localhost:3000
 ```
+
+For a completely isolated local backend without Docker, use the SQLite fallback in `backend/app/core/config.py` or set a SQLite `DATABASE_URL` explicitly.
 
 ## Tests
 
@@ -96,7 +100,7 @@ scripts/              seed + smoke-test helpers
 ```
 
 ## Configuration
-See `.env.example` — database, secret key, OpenAI models/dimension, upload limits, chunking tokens, retrieval top-k, reranker, CORS. Everything degrades gracefully offline.
+See `.env.example` — database, secret key, OpenAI models/dimension, upload limits, chunking tokens, retrieval top-k, reranker, CORS, and demo toggles. Never commit a real `.env` or production secrets.
 
 ## Disclaimer
 Analytical assistance only — not financial, legal, tax, or investment advice. Every screen and report states this.
