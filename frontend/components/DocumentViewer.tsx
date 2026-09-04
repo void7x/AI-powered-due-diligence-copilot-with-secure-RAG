@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, FileText } from "lucide-react";
 import { Modal, Badge } from "@/components/ui";
-import { apiGet, fileUrl, getToken } from "@/lib/api";
-import { DOC_TYPE_LABELS, titleCase } from "@/lib/format";
+import { apiFile, apiGet } from "@/lib/api";
+import { DOC_TYPE_LABELS } from "@/lib/format";
 import type { DocumentItem, DocumentPage } from "@/types";
 
 /** Page-level document inspector: extracted text + evidence highlighting +
@@ -18,6 +18,7 @@ export function DocumentViewer({ open, onClose, document: doc, page, quote }: {
 }) {
   const [pages, setPages] = useState<DocumentPage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState(page || 1);
 
@@ -33,6 +34,29 @@ export function DocumentViewer({ open, onClose, document: doc, page, quote }: {
       .finally(() => setLoading(false));
   }, [open, doc]);
 
+  const openOriginal = async () => {
+    if (!doc || opening) return;
+    setOpening(true);
+    try {
+      const blob = await apiFile(`/api/documents/${doc.id}/file`);
+      const url = URL.createObjectURL(blob);
+      const target = window.open(
+        `${url}${doc.filename.toLowerCase().endsWith(".pdf") ? `#page=${current}` : ""}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      if (!target) {
+        URL.revokeObjectURL(url);
+        throw new Error("The browser blocked the new tab. Allow pop-ups and try again.");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to open the original file");
+    } finally {
+      setOpening(false);
+    }
+  };
+
   const activePage = pages.find((p) => p.page_number === current) ?? null;
   const highlighted = useMemo(() => buildHighlight(activePage?.text ?? "", quote ?? ""), [activePage, quote]);
 
@@ -43,13 +67,15 @@ export function DocumentViewer({ open, onClose, document: doc, page, quote }: {
           <Badge tone="navy">{DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</Badge>
           {doc.fiscal_year && <Badge tone="slate">FY{doc.fiscal_year}</Badge>}
           <span>{pages.length || doc.page_count} pages · {doc.status}</span>
-          <a
-            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-navy-600 hover:text-navy-800"
-            href={fileUrl(doc.id, getToken()) + (doc.filename.toLowerCase().endsWith(".pdf") ? `#page=${current}` : "")}
-            target="_blank" rel="noreferrer"
+          <button
+            type="button"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-navy-600 hover:text-navy-800 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={openOriginal}
+            disabled={opening}
           >
-            <ExternalLink size={12} /> Open original {doc.filename.toLowerCase().endsWith(".pdf") ? `PDF (page ${current})` : "file"}
-          </a>
+            <ExternalLink size={12} />
+            {opening ? "Opening…" : `Open original ${doc.filename.toLowerCase().endsWith(".pdf") ? `PDF (page ${current})` : "file"}`}
+          </button>
         </div>
       )}
       <div className="mb-3 flex items-center gap-2">
@@ -109,7 +135,6 @@ function buildHighlight(text: string, quote: string): Part[] {
     }
   }
   if (!matched) {
-    // substring fallback across the flattened text
     const flat = norm(text);
     const idx = flat.indexOf(target);
     if (idx >= 0) {
