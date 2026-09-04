@@ -19,7 +19,6 @@ from app.schemas.opportunity import (
 from app.schemas.report import AnalyzeOut
 from app.schemas.risk import RiskEvidenceOut, RiskOut
 from app.services.analysis.orchestrator import STEPS, run_company_analysis
-from app.services.finance.metrics import compute_period_ratios
 from app.services.finance.service import load_snapshot
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["analysis"])
@@ -38,7 +37,7 @@ def analyze(company_id: str, db: Session = Depends(get_db),
         raise InsufficientEvidenceError(
             "No processed documents to analyze. Upload documents and wait for processing to finish.")
     manager = get_job_manager()
-    job = manager.create("company_analysis", STEPS)
+    job = manager.create("company_analysis", STEPS, owner_user_id=user.id)
     manager.start(job, lambda j: _run_in_own_session(company.id, j))
     return AnalyzeOut(job_id=job.id, status=job.status, steps=STEPS)
 
@@ -121,8 +120,6 @@ def get_financials(company_id: str, db: Session = Depends(get_db),
                                      currency="USD", unit="million",
                                      metrics=metrics,
                                      ratios=snapshot.ratios_by_period.get(p.period_label, {})))
-    trend_metrics = ["total_revenue", "ebitda", "net_income", "total_debt", "cash",
-                     "operating_cash_flow", "free_cash_flow", "gross_margin_proxy"]
     trends = [TrendPointOut(period_label=p.period_label,
                             values={
                                 "revenue": p.values.get("total_revenue"),
@@ -144,7 +141,7 @@ def get_financials(company_id: str, db: Session = Depends(get_db),
 @router.get("/financials/changes")
 def get_changes(company_id: str, base: str, target: str,
                 db: Session = Depends(get_db), company: Company = Depends(get_scoped_company)):
-    from app.schemas.finance import ChangeItemOut, ChangesOut
+    from app.schemas.finance import ChangesOut
     from app.services.finance.trends import compute_changes
     snapshot = load_snapshot(db, company.id)
     return compute_changes(snapshot, base, target).model_dump()
