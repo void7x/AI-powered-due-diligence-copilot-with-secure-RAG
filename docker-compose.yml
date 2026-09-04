@@ -2,13 +2,13 @@ services:
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: duediligence
-      POSTGRES_PASSWORD: duediligence
-      POSTGRES_DB: duediligence
+      POSTGRES_USER: ${POSTGRES_USER:-duediligence}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-duediligence}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U duediligence"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-duediligence} -d $${POSTGRES_DB:-duediligence}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,8 +19,8 @@ services:
       dockerfile: docker/backend.Dockerfile
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+psycopg2://duediligence:duediligence@db:5432/duediligence
       UPLOAD_DIR: /data/uploads
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
     volumes:
       - uploads:/data/uploads
     ports:
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
       - "3000:3000"
     depends_on:
