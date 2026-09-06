@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from html import escape
 
 from sqlalchemy.orm import Session
 
@@ -110,15 +111,16 @@ def build_report_content(db: Session, company: Company, snapshot: FinancialSnaps
 
 
 def render_report_html(content: dict) -> str:
-    """Standalone printable HTML (inline CSS - print to PDF from any browser)."""
+    """Standalone printable HTML with all dynamic text HTML-escaped."""
     company = content.get("company", {})
     scores = content.get("scores", {})
     rows_html = ""
     for row in content.get("financial_table", []):
         def fmt(v, suffix=""):
             return f"{v:,.1f}{suffix}" if isinstance(v, (int, float)) else "—"
+        period = escape(str(row.get("period", "")))
         rows_html += (
-            f"<tr><td><b>{row.get('period', '')}</b></td>"
+            f"<tr><td><b>{period}</b></td>"
             f"<td>{fmt(row.get('revenue'))}</td>"
             f"<td>{fmt(row.get('gross_margin'), '%')}</td>"
             f"<td>{fmt(row.get('operating_margin'), '%')}</td>"
@@ -130,30 +132,31 @@ def render_report_html(content: dict) -> str:
 
     risk_items = ""
     for r in content.get("risks", []):
-        sev = (r.get("severity") or "medium").upper()
+        sev = escape(str((r.get("severity") or "medium").upper()))
+        safe_class = str(r.get("severity") or "medium").lower().replace("_", "-")
         risk_items += (
-            f"<li><b>{r.get('title')}</b> <span class='sev sev-{sev.lower()}'>{sev}</span><br/>"
-            f"<i>What we found:</i> {r.get('explanation', '')}<br/>"
-            f"<i>Why it matters:</i> {r.get('why_it_matters', '')}<br/>"
-            f"<i>What to investigate:</i> {r.get('recommendation', '')}</li>"
+            f"<li><b>{escape(str(r.get('title') or ''))}</b> <span class='sev sev-{escape(safe_class)}'>{sev}</span><br/>"
+            f"<i>What we found:</i> {escape(str(r.get('explanation') or ''))}<br/>"
+            f"<i>Why it matters:</i> {escape(str(r.get('why_it_matters') or ''))}<br/>"
+            f"<i>What to investigate:</i> {escape(str(r.get('recommendation') or ''))}</li>"
         )
 
     opp_items = "".join(
-        f"<li><b>{o.get('title')}</b> <span class='conf'>{o.get('confidence', '')}</span><br/>"
-        f"{o.get('description', '')}</li>"
+        f"<li><b>{escape(str(o.get('title') or ''))}</b> <span class='conf'>{escape(str(o.get('confidence') or ''))}</span><br/>"
+        f"{escape(str(o.get('description') or ''))}</li>"
         for o in content.get("opportunities", []))
 
     inc_items = "".join(
-        f"<li><b>{i.get('topic')}</b><br/>A: {i.get('claim_a', '')}<br/>B: {i.get('claim_b', '')}<br/>"
-        f"<i>{i.get('explanation', '')}</i></li>"
+        f"<li><b>{escape(str(i.get('topic') or ''))}</b><br/>A: {escape(str(i.get('claim_a') or ''))}<br/>B: {escape(str(i.get('claim_b') or ''))}<br/>"
+        f"<i>{escape(str(i.get('explanation') or ''))}</i></li>"
         for i in content.get("inconsistencies", [])) or "<li>None detected.</li>"
 
     q_items = "".join(
-        f"<li>{q.get('question')} <span class='prio'>[{q.get('priority', '')}]</span></li>"
+        f"<li>{escape(str(q.get('question') or ''))} <span class='prio'>[{escape(str(q.get('priority') or ''))}]</span></li>"
         for q in content.get("questions", []))
 
     docs_items = "".join(
-        f"<li>{d.get('filename')} ({d.get('type')}, {d.get('fiscal_year') or 'n/a'})</li>"
+        f"<li>{escape(str(d.get('filename') or ''))} ({escape(str(d.get('type') or ''))}, {escape(str(d.get('fiscal_year') or 'n/a'))})</li>"
         for d in content.get("documents_analyzed", []))
 
     narrative = content.get("narrative", {})
@@ -162,12 +165,22 @@ def render_report_html(content: dict) -> str:
         body = narrative.get(key, "")
         if not body:
             continue
-        sections_html += f"<h2>{SECTION_TITLES.get(key, key)}</h2><p>{body}</p>"
+        sections_html += f"<h2>{escape(SECTION_TITLES.get(key, key))}</h2><p>{escape(str(body))}</p>"
 
-    generated = content.get("generated_at", "")[:19].replace("T", " ")
+    company_name = escape(str(company.get("name", "")))
+    ticker = escape(str(company.get("ticker") or "unlisted"))
+    industry = escape(str(company.get("industry") or "n/a"))
+    country = escape(str(company.get("country") or "n/a"))
+    generated = escape(str(content.get("generated_at", ""))[:19].replace("T", " "))
+    overall = escape(str(scores.get("overall_risk", 0)))
+    health = scores.get("financial_health", ("-",))
+    growth = scores.get("growth_potential", ("-",))
+    health_score = escape(str(health[0] if health else "-"))
+    growth_score = escape(str(growth[0] if growth else "-"))
+    disclaimer = escape(str(content.get("disclaimer", DISCLAIMER)))
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/>
-<title>Due Diligence Report - {company.get('name', '')}</title>
+<title>Due Diligence Report - {company_name}</title>
 <style>
   body {{ font-family: Georgia, 'Times New Roman', serif; color: #1a2332; max-width: 860px;
          margin: 40px auto; padding: 0 24px; line-height: 1.55; }}
@@ -186,9 +199,9 @@ def render_report_html(content: dict) -> str:
   @media print {{ body {{ margin: 10mm auto; }} }}
 </style></head><body>
 <h1>Executive Due Diligence Summary</h1>
-<p class="meta"><b>{company.get('name', '')}</b> ({company.get('ticker') or 'unlisted'} · {company.get('industry') or 'n/a'}, {company.get('country') or 'n/a'})<br/>
-Overall risk score: {scores.get('overall_risk', 0)} · Financial health: {scores.get('financial_health', ('-',))[0]} / 100 ·
-Growth potential: {scores.get('growth_potential', ('-',))[0]} / 100<br/>
+<p class="meta"><b>{company_name}</b> ({ticker} · {industry}, {country})<br/>
+Overall risk score: {overall} · Financial health: {health_score} / 100 ·
+Growth potential: {growth_score} / 100<br/>
 Generated {generated} UTC</p>
 <h2>Documents Analyzed</h2><ul>{docs_items}</ul>
 {sections_html}
@@ -199,5 +212,5 @@ Generated {generated} UTC</p>
 <h2>Growth Opportunities</h2><ul>{opp_items or '<li>None detected.</li>'}</ul>
 <h2>Cross-Document Inconsistencies</h2><ul>{inc_items}</ul>
 <h2>Key Questions for Management</h2><ul>{q_items}</ul>
-<p class="disclaimer">{content.get('disclaimer', DISCLAIMER)}</p>
+<p class="disclaimer">{disclaimer}</p>
 </body></html>"""
