@@ -36,6 +36,16 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
     () => (data?.trends ?? []).map((t) => ({ period: t.period_label, ...t.values })),
     [data]);
 
+  const latest = data?.periods[data.periods.length - 1];
+  const previous = data && data.periods.length >= 2 ? data.periods[data.periods.length - 2] : null;
+  const latestRevenue = latest?.metrics.revenue ?? null;
+  const latestEbitda = latest?.metrics.ebitda ?? null;
+  const latestFcf = latest?.metrics.free_cash_flow ?? null;
+  const latestMargin = latest?.ratios.operating_margin ?? null;
+  const revenueDelta = latestRevenue != null && previous?.metrics.revenue != null && previous.metrics.revenue !== 0
+    ? ((latestRevenue - previous.metrics.revenue) / Math.abs(previous.metrics.revenue)) * 100 : null;
+  const debtToEbitda = latest?.ratios.debt_to_ebitda ?? null;
+
   if (loading) return <LoadingState label="Loading financials…" />;
   if (error) return <ErrorState message={error} retry={refresh} />;
   if (!data || data.periods.length === 0) {
@@ -45,6 +55,17 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader title="Financial health at a glance" subtitle={`Latest reported period: ${latest?.period_label ?? "—"}`} />
+        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Kpi label="Revenue" value={fmtMoney(latestRevenue)} delta={revenueDelta == null ? null : fmtDelta(revenueDelta)} />
+          <Kpi label="EBITDA" value={fmtMoney(latestEbitda)} />
+          <Kpi label="Operating margin" value={fmtPct(latestMargin)} />
+          <Kpi label="Free cash flow" value={fmtMoney(latestFcf)} />
+          <Kpi label="Debt / EBITDA" value={fmtNumber(debtToEbitda, 2)} />
+        </div>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         {CHARTS.map((c) => (
           <Card key={c.title}>
@@ -107,6 +128,18 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
           </Table>
         )}
       </Card>
+    </div>
+  );
+}
+
+function Kpi({ label, value, delta }: { label: string; value: string; delta?: string | null }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <div className="mt-2 flex items-baseline justify-between gap-2">
+        <p className="text-xl font-bold tabular-nums text-slate-900">{value}</p>
+        {delta && <span className="text-xs font-semibold text-emerald-600">{delta}</span>}
+      </div>
     </div>
   );
 }
