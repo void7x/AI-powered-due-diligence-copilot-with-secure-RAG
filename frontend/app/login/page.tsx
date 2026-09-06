@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Briefcase, LockKeyhole, Loader2, ShieldCheck } from "lucide-react";
 import { Button, Field, Input } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -38,7 +37,15 @@ export default function LoginPage() {
           <span className="text-lg font-semibold tracking-tight">AI Due Diligence Copilot</span>
         </div>
         <form onSubmit={submit} className="card space-y-4 p-6" aria-label="Sign in">
-          <h1 className="text-base font-semibold text-slate-900">Sign in to your workspace</h1>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-base font-semibold text-slate-900">Sign in to your workspace</h1>
+              <p className="mt-1 text-xs text-slate-500">Private evidence stays inside the authenticated company workspace.</p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+              <ShieldCheck size={12} /> Protected
+            </span>
+          </div>
           <Field label="Email">
             <Input type="email" autoComplete="email" required value={email}
                    onChange={(e) => setEmail(e.target.value)} placeholder="you@firm.com" />
@@ -49,8 +56,8 @@ export default function LoginPage() {
           </Field>
           {error && <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">
-            {busy ? <Loader2 size={14} className="animate-spin" /> : null}
-            {busy ? "Signing in…" : "Sign in"}
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <LockKeyhole size={14} />}
+            {busy ? "Signing in…" : "Sign in securely"}
           </Button>
           <p className="text-center text-[11px] leading-relaxed text-slate-400">
             Demo account: <code className="rounded bg-slate-100 px-1">demo@example.com / demo1234</code>
