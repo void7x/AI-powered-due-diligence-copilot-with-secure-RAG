@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { ArrowRight, Play, ShieldAlert } from "lucide-react";
 import { Button, Card, CardHeader, ErrorState, LoadingState } from "@/components/ui";
 import { ScoreCard } from "@/components/ScoreCard";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -33,6 +33,17 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
   if (error) return <ErrorState message={error} retry={refresh} />;
   if (!data) return null;
 
+  const overallRisk = data.scorecards.find((s) => s.label === "Overall Risk")?.score ?? null;
+  const financialHealth = data.scorecards.find((s) => s.label === "Financial Health")?.score ?? null;
+  const growthPotential = data.scorecards.find((s) => s.label === "Growth Potential")?.score ?? null;
+  const leadRisk = data.top_risks[0];
+  const leadOpportunity = data.top_opportunities[0];
+  const posture = overallRisk == null
+    ? "Awaiting analysis"
+    : overallRisk >= 70 ? "High diligence risk"
+    : overallRisk >= 45 ? "Elevated diligence risk"
+    : "Lower diligence risk";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -53,6 +64,61 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {data.scorecards.map((s) => <ScoreCard key={s.label} {...s} />)}
       </div>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={16} className="text-navy-700" />
+                <h2 className="text-sm font-semibold text-slate-900">Decision snapshot</h2>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">A fast read on where the diligence team should focus next.</p>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              overallRisk == null ? "bg-slate-100 text-slate-600" :
+              overallRisk >= 70 ? "bg-red-100 text-red-700" :
+              overallRisk >= 45 ? "bg-amber-100 text-amber-700" :
+              "bg-emerald-100 text-emerald-700"
+            }`}>
+              {posture}
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-5 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Financial health</p>
+            <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
+              {financialHealth == null ? "—" : `${financialHealth.toFixed(0)}/100`}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">Balance-sheet and cash-flow strength.</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Growth potential</p>
+            <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
+              {growthPotential == null ? "—" : `${growthPotential.toFixed(0)}/100`}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">Evidence-backed upside signals.</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Immediate focus</p>
+            {leadRisk ? (
+              <Link href={`/companies/${companyId}/risks`} className="mt-2 flex items-start justify-between gap-2 text-sm font-medium text-navy-700 hover:underline">
+                <span className="line-clamp-2">{leadRisk.title}</span>
+                <ArrowRight size={14} className="mt-0.5 shrink-0" />
+              </Link>
+            ) : leadOpportunity ? (
+              <Link href={`/companies/${companyId}/opportunities`} className="mt-2 flex items-start justify-between gap-2 text-sm font-medium text-navy-700 hover:underline">
+                <span className="line-clamp-2">{leadOpportunity.title}</span>
+                <ArrowRight size={14} className="mt-0.5 shrink-0" />
+              </Link>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">Run analysis to identify the first diligence priority.</p>
+            )}
+            <p className="mt-1 text-xs text-slate-500">Start with the strongest risk signal, then validate the upside.</p>
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <CardHeader title="Financial overview" subtitle="Extracted from filings — deterministic and source-cited" />
