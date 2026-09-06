@@ -51,6 +51,15 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
     : readinessScore >= 50
       ? { label: "Analysis in progress", tone: "bg-amber-100 text-amber-700", bar: "bg-amber-500" }
       : { label: "Needs preparation", tone: "bg-slate-100 text-slate-600", bar: "bg-slate-400" };
+  const recommendation = overallRisk == null || growthPotential == null
+    ? { label: "Insufficient evidence", tone: "bg-slate-100 text-slate-700", explanation: "Complete document processing and analysis before making a diligence decision." }
+    : overallRisk >= 70 && growthPotential < 60
+      ? { label: "Proceed with caution", tone: "bg-red-100 text-red-700", explanation: "Risk signals currently outweigh the documented growth upside." }
+      : overallRisk >= 70
+        ? { label: "Investigate before proceeding", tone: "bg-amber-100 text-amber-700", explanation: "The company shows meaningful upside, but elevated risk signals require validation." }
+        : growthPotential >= 70 && overallRisk < 45
+          ? { label: "Strong candidate for deeper diligence", tone: "bg-emerald-100 text-emerald-700", explanation: "Growth signals are strong while the current risk profile remains comparatively contained." }
+          : { label: "Continue diligence", tone: "bg-blue-100 text-blue-700", explanation: "The evidence is mixed; focus the next review cycle on the leading risks and upside signals." };
   const posture = overallRisk == null
     ? "Awaiting analysis"
     : overallRisk >= 70 ? "High diligence risk"
@@ -141,6 +150,17 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
             )}
             <p className="mt-1 text-xs text-slate-500">Start with the strongest risk signal, then validate the upside.</p>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Executive recommendation</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">{recommendation.label}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">{recommendation.explanation}</p>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${recommendation.tone}`}>Risk × upside synthesis</span>
         </div>
       </Card>
 
