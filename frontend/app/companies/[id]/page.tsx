@@ -38,6 +38,19 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
   const growthPotential = data.scorecards.find((s) => s.label === "Growth Potential")?.score ?? null;
   const leadRisk = data.top_risks[0];
   const leadOpportunity = data.top_opportunities[0];
+  const readinessInputs = [
+    data.document_count > 0,
+    data.ready_document_count === data.document_count && data.document_count > 0,
+    data.last_analyzed_at != null,
+    data.report_id != null,
+    data.top_risks.length > 0 || data.top_opportunities.length > 0,
+  ];
+  const readinessScore = Math.round((readinessInputs.filter(Boolean).length / readinessInputs.length) * 100);
+  const readiness = readinessScore >= 80
+    ? { label: "Decision-ready", tone: "bg-emerald-100 text-emerald-700", bar: "bg-emerald-500" }
+    : readinessScore >= 50
+      ? { label: "Analysis in progress", tone: "bg-amber-100 text-amber-700", bar: "bg-amber-500" }
+      : { label: "Needs preparation", tone: "bg-slate-100 text-slate-600", bar: "bg-slate-400" };
   const posture = overallRisk == null
     ? "Awaiting analysis"
     : overallRisk >= 70 ? "High diligence risk"
@@ -85,7 +98,7 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
             </span>
           </div>
         </div>
-        <div className="grid gap-4 p-5 md:grid-cols-3">
+        <div className="grid gap-4 p-5 md:grid-cols-4">
           <div className="rounded-lg border border-slate-200 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Financial health</p>
             <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
@@ -99,6 +112,17 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
               {growthPotential == null ? "—" : `${growthPotential.toFixed(0)}/100`}
             </p>
             <p className="mt-1 text-xs text-slate-500">Evidence-backed upside signals.</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Diligence readiness</p>
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <p className="text-2xl font-bold tabular-nums text-slate-900">{readinessScore}%</p>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${readiness.tone}`}>{readiness.label}</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full ${readiness.bar}`} style={{ width: `${readinessScore}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-slate-500">Documents, analysis, findings, and report completeness.</p>
           </div>
           <div className="rounded-lg border border-slate-200 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Immediate focus</p>
