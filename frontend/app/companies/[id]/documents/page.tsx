@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Filter, RotateCw, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, Filter, RotateCw, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Badge, Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, Table } from "@/components/ui";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import { useApiData, usePoll } from "@/hooks/useApi";
@@ -40,8 +40,13 @@ export default function DocumentsPage({ params, searchParams }: {
   const processing = (data ?? []).some((d) => !["READY", "FAILED", "UPLOADED"].includes(d.status));
   const { data: polled } = usePoll<DocumentItem[]>(`/api/companies/${companyId}/documents`, 3000, processing);
 
-  // Citation deep-link: /documents?docId=..&page=..
   const docList = polled ?? data ?? [];
+  const readyCount = docList.filter((d) => d.status === "READY").length;
+  const failedCount = docList.filter((d) => d.status === "FAILED").length;
+  const processingCount = docList.filter((d) => !["READY", "FAILED", "UPLOADED"].includes(d.status)).length;
+  const uploadedCount = docList.filter((d) => d.status === "UPLOADED").length;
+  const readiness = docList.length ? Math.round((readyCount / docList.length) * 100) : 0;
+
   useEffect(() => {
     if (sp.docId && docList.length && !viewer) {
       const doc = docList.find((d) => d.id === sp.docId);
@@ -70,6 +75,29 @@ export default function DocumentsPage({ params, searchParams }: {
 
   return (
     <div className="space-y-4">
+      {docList.length > 0 && (
+        <Card className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ingestion health</p>
+              <p className="mt-1 text-sm font-medium text-slate-800">{readiness}% of documents are analysis-ready</p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge tone="green"><CheckCircle2 size={12} /> {readyCount} ready</Badge>
+              {processingCount > 0 && <Badge tone="amber"><RotateCw size={12} /> {processingCount} processing</Badge>}
+              {uploadedCount > 0 && <Badge tone="slate">{uploadedCount} uploaded</Badge>}
+              {failedCount > 0 && <Badge tone="red"><AlertTriangle size={12} /> {failedCount} failed</Badge>}
+            </div>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${readiness}%` }} />
+          </div>
+          {failedCount > 0 && (
+            <p className="mt-2 text-[11px] text-red-600">Review failed documents before relying on the company analysis.</p>
+          )}
+        </Card>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
