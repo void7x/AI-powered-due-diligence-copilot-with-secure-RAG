@@ -6,7 +6,7 @@ backend/   FastAPI app (app/), Alembic migrations, tests/
 frontend/  Next.js 14 App Router app
 docs/      architecture, API, RAG, finance, risk, security, development
 docker/    Dockerfiles
-data/      local SQLite DB + uploads (gitignored)
+ data/      local SQLite DB + uploads (gitignored)
 scripts/   development/smoke-test helpers
 ```
 
@@ -22,8 +22,7 @@ pip install -r requirements.txt
 cp ../.env.example .env            # adjust DATABASE_URL / SECRET_KEY as needed
 alembic upgrade head
 python -m app.seed                 # optional demo user + synthetic company
-autopep8 --version                 # optional: use your preferred formatter/linter
-y uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 - SQLite fallback works for isolated development/tests; Docker uses PostgreSQL + pgvector.
