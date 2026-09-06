@@ -4,8 +4,8 @@ uvicorn[standard]>=0.30
 python-multipart>=0.0.9
 
 # Data / validation
-pydantic>=2.7
-pydantic-settings>=2.3
+pydantic==2.11.10
+pydantic-settings==2.10.1
 SQLAlchemy>=2.0.30
 alembic>=1.13
 pgvector>=0.3.0
