@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, FileText, Plus } from "lucide-react";
+import { Activity, Building2, FileText, Plus } from "lucide-react";
 import { Button, Card, CardHeader, ErrorState, LoadingState } from "@/components/ui";
 import { CompanyCard } from "@/components/CompanyCard";
 import { useApiData } from "@/hooks/useApi";
@@ -15,8 +15,9 @@ export default function DashboardPage() {
     <main className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">Portfolio overview across your company workspaces</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">Investment intelligence workspace</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Due Diligence Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Portfolio overview across your company workspaces</p>
         </div>
         <Link href="/companies">
           <Button><Plus size={14} /> New company</Button>
@@ -27,6 +28,18 @@ export default function DashboardPage() {
       {error && <ErrorState message={error} retry={refresh} />}
       {data && (
         <div className="space-y-6">
+          <Card className="overflow-hidden border-navy-100 bg-gradient-to-r from-slate-50 to-white">
+            <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Portfolio pulse</p>
+                <p className="mt-1 text-sm text-slate-700">{data.totals.companies ?? 0} companies · {data.totals.documents ?? 0} evidence documents · {data.totals.reports ?? 0} generated reports</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <Activity size={13} /> Evidence workspace active
+              </span>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-3 gap-4">
             <StatCard icon={<Building2 size={16} />} label="Companies" value={data.totals.companies ?? 0} />
             <StatCard icon={<FileText size={16} />} label="Documents" value={data.totals.documents ?? 0} />
@@ -34,7 +47,13 @@ export default function DashboardPage() {
           </div>
 
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Companies</h2>
+            <div className="mb-3 flex items-end justify-between">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Company workspaces</h2>
+                <p className="mt-0.5 text-xs text-slate-400">Open a workspace to review risk, financials, opportunities and evidence.</p>
+              </div>
+              <Link href="/companies" className="text-xs font-medium text-navy-600 hover:underline">View all</Link>
+            </div>
             {data.companies.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
                 <p className="text-sm font-medium text-slate-700">No companies yet</p>
@@ -51,7 +70,7 @@ export default function DashboardPage() {
           </section>
 
           <Card>
-            <CardHeader title="Recent activity" />
+            <CardHeader title="Recent activity" subtitle="Latest evidence and report events across the portfolio" />
             <ul className="divide-y divide-slate-100">
               {data.recent_activity.map((a, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
