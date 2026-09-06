@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Briefcase, LockKeyhole, Loader2, ShieldCheck } from "lucide-react";
 import { Button, Field, Input } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
