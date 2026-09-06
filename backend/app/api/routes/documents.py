@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import pathlib
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_company, get_scoped_document
@@ -14,9 +12,9 @@ from app.core.jobs import get_job_manager
 from app.core.logging import get_logger
 from app.models import Document, DocumentPage, User
 from app.models.enums import DocumentStatus, DocumentType
-from app.schemas.document import DocumentOut, DocumentPageOut, DocumentStatusOut, DocumentUpdate
+from app.schemas.document import DocumentOut, DocumentPageOut, DocumentStatusOut
 from app.services.ingestion.pipeline import delete_document_data, process_document_sync
-from app.services.ingestion.storage import delete_stored_file, store_upload
+from app.services.ingestion.storage import delete_stored_file, read_stored_file, store_upload
 from app.services.ingestion.validation import validate_magic_bytes, validate_upload
 from app.utils.hashing import sha256_bytes
 
@@ -53,12 +51,12 @@ async def upload_documents(company_id: str,
             raise BadRequestError(
                 f"'{safe_name}' is a duplicate of an already-uploaded document "
                 f"('{duplicate.filename}').", code="duplicate_document", status_code=409)
-        path = store_upload(settings, company.id, safe_name, data)
+        storage_path = store_upload(settings, company.id, safe_name, data)
         doc_type = document_type or DocumentType.OTHER.value
         doc = Document(
             company_id=company.id, filename=safe_name, document_type=doc_type,
             fiscal_year=fiscal_year, source_url="", file_hash=file_hash,
-            storage_path=str(path), mime_type=upload.content_type or "",
+            storage_path=storage_path, mime_type=upload.content_type or "",
             file_size=len(data), status=DocumentStatus.UPLOADED.value,
         )
         db.add(doc)
@@ -105,8 +103,9 @@ def get_document(db: Session = Depends(get_db), doc: Document = Depends(get_scop
 
 @router.delete("/documents/{document_id}", status_code=204)
 def delete_document(db: Session = Depends(get_db), doc: Document = Depends(get_scoped_document)):
+    settings = get_settings()
     delete_document_data(db, doc.id)
-    delete_stored_file(doc.storage_path)
+    delete_stored_file(settings, doc.storage_path)
     db.delete(doc)
     db.commit()
 
@@ -147,9 +146,10 @@ def document_pages(page: int | None = Query(default=None, ge=1),
 @router.get("/documents/{document_id}/file")
 def document_file(doc: Document = Depends(get_scoped_document)):
     """Serve the original file using header-based authentication."""
-
-    path = pathlib.Path(doc.storage_path)
-    if not path.exists():
-        raise NotFoundError("Stored file is missing.")
-    return FileResponse(path, media_type=doc.mime_type or "application/octet-stream",
-                        filename=doc.filename)
+    settings = get_settings()
+    try:
+        data = read_stored_file(settings, doc.storage_path)
+    except (FileNotFoundError, ValueError):
+        raise NotFoundError("Stored file is missing.") from None
+    return Response(content=data, media_type=doc.mime_type or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'})
