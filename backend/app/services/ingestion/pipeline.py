@@ -19,6 +19,7 @@ from app.services.chunking.chunker import DocumentChunker
 from app.services.extraction.classifier import classify_document
 from app.services.extraction.registry import extract_any
 from app.services.finance.extractor import extract_financials, upsert_financials
+from app.services.ingestion.storage import materialize_upload
 
 log = get_logger("app.ingestion")
 
@@ -46,8 +47,9 @@ def process_document_sync(document_id: str) -> None:
         settings = get_settings()
         try:
             _set_status(db, document, DocumentStatus.EXTRACTING)
-            result = extract_any(EXT_TO_TYPE_HINT[document.filename.rsplit(".", 1)[-1].lower()],
-                                 document.storage_path)
+            suffix = document.filename.rsplit(".", 1)[-1].lower()
+            with materialize_upload(settings, document.storage_path) as local_path:
+                result = extract_any(EXT_TO_TYPE_HINT[suffix], str(local_path))
             db.query(DocumentPage).filter(DocumentPage.document_id == document.id).delete()
             for page in result.pages:
                 db.add(DocumentPage(
