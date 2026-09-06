@@ -6,7 +6,7 @@ backend/   FastAPI app (app/), Alembic migrations, tests/
 frontend/  Next.js 14 App Router app
 docs/      architecture, API, RAG, finance, risk, security, development
 docker/    Dockerfiles
- data/      local SQLite DB + uploads (gitignored)
+data/      local SQLite DB + uploads (gitignored)
 scripts/   development/smoke-test helpers
 ```
 
