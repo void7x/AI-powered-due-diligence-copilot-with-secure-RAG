@@ -5,6 +5,7 @@ import { Printer } from "lucide-react";
 import { Button, Badge, Table } from "@/components/ui";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { CitationBadge } from "@/components/CitationBadge";
+import { ExecutiveDecisionCard } from "@/components/ExecutiveDecisionCard";
 import { API_URL, getToken } from "@/lib/api";
 import { fmtDateTime, fmtMoney, fmtNumber, fmtPct, titleCase } from "@/lib/format";
 import type { ReportContent } from "@/types";
@@ -72,6 +73,8 @@ export function ReportView({ report, content }: { report: { id: string }; conten
             <SeverityBadge level={scores.growth_potential?.[1] ?? ""} /></span>
         </div>
       </header>
+
+      <ExecutiveDecisionCard content={content} />
 
       <Section title="Documents analyzed">
         <ul className="list-inside list-disc text-xs text-slate-600">
