@@ -74,7 +74,7 @@ export default function CompanyOverviewPage({ params }: { params: { id: string }
           {data.last_analyzed_at ? ` · last analyzed ${fmtDate(data.last_analyzed_at)}` : " · not analyzed yet"}
         </p>
         <div className="flex gap-2">
-          <Button size="sm" onClick={analyze}><Play size={12} /> Run analysis</Button>
+          <Button size="sm" onClick={analyze}><Play size={12} /> Run full due diligence</Button>
           {data.report_id && (
             <Link href={`/reports/${data.report_id}`}>
               <Button size="sm" variant="secondary">Open latest report</Button>
