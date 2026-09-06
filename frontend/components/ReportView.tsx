@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Printer } from "lucide-react";
 import { Button, Badge, Table } from "@/components/ui";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -10,6 +11,32 @@ import type { ReportContent } from "@/types";
 
 export function ReportView({ report, content }: { report: { id: string }; content: ReportContent }) {
   const scores = content.scores;
+  const [openingHtml, setOpeningHtml] = useState(false);
+
+  const openStandaloneHtml = async () => {
+    if (openingHtml) return;
+    setOpeningHtml(true);
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_URL}/api/reports/${report.id}/html`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`Could not open report HTML (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const target = window.open(url, "_blank", "noopener,noreferrer");
+      if (!target) {
+        URL.revokeObjectURL(url);
+        throw new Error("The browser blocked the new tab. Allow pop-ups and try again.");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not open report HTML");
+    } finally {
+      setOpeningHtml(false);
+    }
+  };
+
   return (
     <article className="mx-auto max-w-4xl">
       <header className="border-b-2 border-navy-800 pb-4">
@@ -27,13 +54,14 @@ export function ReportView({ report, content }: { report: { id: string }; conten
             <Button variant="secondary" size="sm" onClick={() => window.print()}>
               <Printer size={13} /> Print / PDF
             </Button>
-            <a
-              href={`${API_URL}/api/reports/${report.id}/html?token=${getToken()}`}
-              target="_blank" rel="noreferrer"
-              className="inline-flex items-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            <button
+              type="button"
+              onClick={openStandaloneHtml}
+              disabled={openingHtml}
+              className="inline-flex items-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Standalone HTML
-            </a>
+              {openingHtml ? "Opening…" : "Standalone HTML"}
+            </button>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-4 text-sm">
