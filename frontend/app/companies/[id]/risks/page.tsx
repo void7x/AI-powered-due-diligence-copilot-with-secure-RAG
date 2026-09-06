@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardHeader, EmptyState, ErrorState, LoadingState } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { AlertTriangle, ArrowRight, Play } from "lucide-react";
+import { Card, CardHeader, EmptyState, ErrorState, LoadingState, Button } from "@/components/ui";
 import { RiskCard } from "@/components/RiskCard";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { useApiData } from "@/hooks/useApi";
-import { Button } from "@/components/ui";
-import { Play } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { AnalyzeProgress } from "@/components/AnalysisPanel";
@@ -34,6 +33,14 @@ export default function RisksPage({ params }: { params: { id: string } }) {
 
   const loading = risks.loading || inconsistencies.loading || questions.loading;
   const error = risks.error ?? inconsistencies.error ?? questions.error;
+  const riskSummary = useMemo(() => {
+    const items = risks.data ?? [];
+    const critical = items.filter((r) => ["critical", "CRITICAL"].includes(String(r.severity))).length;
+    const high = items.filter((r) => ["high", "HIGH"].includes(String(r.severity))).length;
+    const medium = items.filter((r) => ["medium", "MEDIUM"].includes(String(r.severity))).length;
+    const top = items[0];
+    return { total: items.length, critical, high, medium, top };
+  }, [risks.data]);
 
   return (
     <div className="space-y-4">
@@ -61,9 +68,55 @@ export default function RisksPage({ params }: { params: { id: string } }) {
           <EmptyState title="No risks detected yet"
             hint="Run an analysis: the deterministic risk engine evaluates leverage, liquidity, cash conversion, margins, concentration and disclosure signals." />
         ) : (
-          <div className="space-y-3">
-            {risks.data!.map((r) => <RiskCard key={r.id} risk={r} companyId={companyId} />)}
-          </div>
+          <>
+            <Card className="overflow-hidden">
+              <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-amber-600" />
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900">Risk priority</h2>
+                      <p className="text-xs text-slate-500">Focus the next diligence pass on the highest-severity signals.</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {riskSummary.total} total risks
+                  </span>
+                </div>
+              </div>
+              <div className="grid gap-3 p-5 sm:grid-cols-3">
+                <div className="rounded-lg border border-red-100 bg-red-50/50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-red-500">Critical</p>
+                  <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{riskSummary.critical}</p>
+                  <p className="mt-1 text-xs text-slate-500">Immediate escalation signals.</p>
+                </div>
+                <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600">High</p>
+                  <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{riskSummary.high}</p>
+                  <p className="mt-1 text-xs text-slate-500">Priority validation items.</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Next focus</p>
+                  {riskSummary.top ? (
+                    <a href={`#risk-${riskSummary.top.id}`} className="mt-1 flex items-start gap-2 text-sm font-medium text-navy-700 hover:underline">
+                      <span className="line-clamp-2">{riskSummary.top.title}</span>
+                      <ArrowRight size={14} className="mt-0.5 shrink-0" />
+                    </a>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-500">No priority identified.</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">Start with the first ranked signal.</p>
+                </div>
+              </div>
+            </Card>
+            <div className="space-y-3">
+              {risks.data!.map((r) => (
+                <div key={r.id} id={`risk-${r.id}`}>
+                  <RiskCard risk={r} companyId={companyId} />
+                </div>
+              ))}
+            </div>
+          </>
         )
       )}
 
