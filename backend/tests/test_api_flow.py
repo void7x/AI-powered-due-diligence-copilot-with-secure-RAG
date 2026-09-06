@@ -218,7 +218,9 @@ def test_report_html_escapes_untrusted_text():
         "disclaimer": "<script>alert('d')</script>",
     }
     html = render_report_html(payload)
-    assert "<script>" not in html
-    assert "onerror=" not in html.lower()
-    assert "&lt;script&gt;" in html
-    assert "&lt;img" in html
+    lower = html.lower()
+    assert "<script>" not in lower
+    assert "<img" not in lower
+    assert "<svg" not in lower
+    assert "&lt;script&gt;" in lower
+    assert "&lt;img" in lower
