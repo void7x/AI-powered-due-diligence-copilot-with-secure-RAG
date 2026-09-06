@@ -120,7 +120,6 @@ def test_chat_with_citations_end_to_end(client, auth_headers, sample_files):
     assert citation["source_id"].startswith("SOURCE_")
     assert answer["session_id"]
 
-    # session history retrievable
     sessions = client.get(f"/api/companies/{company_id}/chat/sessions", headers=auth_headers).json()
     assert len(sessions) == 1
     assert len(sessions[0]["messages"]) == 2
@@ -140,7 +139,6 @@ def test_analysis_and_report_flow(client, auth_headers, sample_files):
         doc = upload_and_process(client, auth_headers, company_id, path, doc_type, year)
         assert wait_ready(client, auth_headers, company_id, doc["id"]) == "READY"
 
-    # analyze via job endpoint
     resp = client.post(f"/api/companies/{company_id}/analyze", headers=auth_headers)
     assert resp.status_code == 200, resp.text
     job_id = resp.json()["job_id"]
@@ -178,7 +176,6 @@ def test_analysis_and_report_flow(client, auth_headers, sample_files):
     debt = next(i for i in changes["items"] if i["metric"] == "total_debt")
     assert debt["direction"] == "up" and debt["sentiment"] == "negative"
 
-    # generate report (synchronous convenience endpoint)
     report = client.post(f"/api/companies/{company_id}/report", headers=auth_headers)
     assert report.status_code == 201, report.text
     report_id = report.json()["id"]
@@ -187,6 +184,9 @@ def test_analysis_and_report_flow(client, auth_headers, sample_files):
     assert detail["content"]["risks"]
     html = client.get(f"/api/reports/{report_id}/html", headers=auth_headers)
     assert html.status_code == 200 and "Executive Due Diligence Summary" in html.text
+
+    token = auth_headers["Authorization"].split(" ", 1)[1]
+    assert client.get(f"/api/reports/{report_id}/html?token={token}").status_code == 401
 
     overview = client.get(f"/api/companies/{company_id}/overview", headers=auth_headers).json()
     labels = {c["label"] for c in overview["scorecards"]}
@@ -199,3 +199,26 @@ def test_analysis_and_report_flow(client, auth_headers, sample_files):
                         params={"q": "top three customers"}).json()
     assert search["total"] >= 1
     assert any("44" in h["excerpt"] for h in search["hits"])
+
+
+def test_report_html_escapes_untrusted_text():
+    from app.services.reports.generator import render_report_html
+
+    payload = {
+        "company": {"name": "<img src=x onerror=alert(1)>", "ticker": "<T>", "industry": "<script>alert(1)</script>", "country": "US"},
+        "scores": {"overall_risk": 42, "financial_health": (70, "high"), "growth_potential": (60, "medium")},
+        "generated_at": "2026-01-01T00:00:00+00:00",
+        "documents_analyzed": [{"filename": "<script>alert(1)</script>.pdf", "type": "annual_report", "fiscal_year": 2025}],
+        "financial_table": [{"period": "FY2025", "revenue": 10, "gross_margin": 20, "operating_margin": 12, "net_income": 2, "ebitda": 3, "total_debt": 4, "operating_cash_flow": 1}],
+        "narrative": {"company_overview": "<script>alert('x')</script>"},
+        "risks": [{"title": "<b>Risk</b>", "severity": "high", "explanation": "<script>x</script>", "why_it_matters": "<img src=x>", "recommendation": "<svg onload=alert(1)>"}],
+        "opportunities": [{"title": "<b>Opp</b>", "confidence": "high", "description": "<script>x</script>"}],
+        "inconsistencies": [{"topic": "<b>Topic</b>", "claim_a": "<script>a</script>", "claim_b": "<script>b</script>", "explanation": "<img src=x>", "severity": "medium"}],
+        "questions": [{"question": "<script>q</script>", "priority": "high"}],
+        "disclaimer": "<script>alert('d')</script>",
+    }
+    html = render_report_html(payload)
+    assert "<script>" not in html
+    assert "onerror=" not in html.lower()
+    assert "&lt;script&gt;" in html
+    assert "&lt;img" in html
