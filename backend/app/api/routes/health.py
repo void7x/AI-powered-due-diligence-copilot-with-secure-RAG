@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 
 from app.core.config import get_settings
@@ -17,5 +17,15 @@ def health():
             conn.execute(text("SELECT 1"))
     except Exception:  # noqa: BLE001
         db_ok = False
-    return {"status": "ok" if db_ok else "degraded", "database": db_ok,
-            "app": get_settings().app_name}
+
+    if not db_ok:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "degraded",
+                "database": False,
+                "app": get_settings().app_name,
+            },
+        )
+
+    return {"status": "ok", "database": True, "app": get_settings().app_name}
