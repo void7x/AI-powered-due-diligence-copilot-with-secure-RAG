@@ -35,9 +35,15 @@ class Settings(BaseSettings):
     # Database (PostgreSQL + pgvector in production; SQLite fallback for dev/tests)
     database_url: str = f"sqlite:///{ROOT_DIR / 'data' / 'app.db'}"
 
-    # Files
+    # Files / object storage
+    # local = filesystem under UPLOAD_DIR; r2 = Cloudflare R2 via its S3-compatible API.
+    storage_backend: str = "local"
     upload_dir: Path = ROOT_DIR / "data" / "uploads"
     max_upload_mb: int = 50
+    r2_endpoint_url: str | None = None
+    r2_bucket: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: str | None = None
 
     # CORS
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
@@ -89,6 +95,23 @@ class Settings(BaseSettings):
 
         if self.create_demo_user and not self.demo_password:
             raise ValueError("DEMO_PASSWORD must be configured when CREATE_DEMO_USER=true")
+
+        storage_backend = self.storage_backend.strip().lower()
+        if storage_backend not in {"local", "r2"}:
+            raise ValueError("STORAGE_BACKEND must be either 'local' or 'r2'")
+        self.storage_backend = storage_backend
+
+        if storage_backend == "r2":
+            missing = [
+                name for name, value in {
+                    "R2_ENDPOINT_URL": self.r2_endpoint_url,
+                    "R2_BUCKET": self.r2_bucket,
+                    "R2_ACCESS_KEY_ID": self.r2_access_key_id,
+                    "R2_SECRET_ACCESS_KEY": self.r2_secret_access_key,
+                }.items() if not value or not value.strip()
+            ]
+            if missing:
+                raise ValueError("R2 storage requires: " + ", ".join(missing))
 
         return self
 
