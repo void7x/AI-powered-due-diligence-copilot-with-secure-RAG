@@ -36,6 +36,30 @@ TestSession = sessionmaker(bind=_test_engine, autoflush=False, expire_on_commit=
 dbmod.SessionLocal = TestSession
 
 
+@pytest.fixture(autouse=True)
+def sync_background_jobs(monkeypatch):
+    """Run in-process background jobs inline for deterministic SQLite tests.
+
+    Production uses daemon threads. The CI test database is a single shared
+    in-memory SQLite connection, so concurrent worker/request sessions can
+    otherwise race on the same connection and make committed state appear stale.
+    """
+    from app.core.jobs import JobManager
+
+    def start_sync(self, job, fn, *args):
+        try:
+            fn(job, *args)
+            job.status = "succeeded"
+            job.progress = 100
+        except Exception as exc:  # noqa: BLE001
+            job.status = "failed"
+            job.error = str(exc) or exc.__class__.__name__
+            raise
+        return job
+
+    monkeypatch.setattr(JobManager, "start", start_sync)
+
+
 @pytest.fixture(scope="session")
 def sample_files(tmp_path_factory) -> list[tuple[str, Path, str, int]]:
     return generate_sample_documents(tmp_path_factory.mktemp("samples"))
