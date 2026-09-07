@@ -37,13 +37,25 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
     changesQs ? `/api/companies/${companyId}/financials/changes?${changesQs}` : null, [changesQs]);
 
   const chartData = useMemo(
-    () => (data?.trends ?? []).map((t) => ({ period: t.period_label, ...t.values })),
+    () => (data?.periods ?? []).map((p) => ({
+      period: p.period_label,
+      revenue: metricValue(p, "total_revenue"),
+      ebitda: metricValue(p, "ebitda"),
+      net_income: metricValue(p, "net_income"),
+      debt: metricValue(p, "total_debt"),
+      cash: metricValue(p, "cash"),
+      operating_cash_flow: metricValue(p, "operating_cash_flow"),
+      free_cash_flow: metricValue(p, "free_cash_flow"),
+      gross_margin: p.ratios.gross_margin ?? null,
+      operating_margin: p.ratios.operating_margin ?? null,
+      net_margin: p.ratios.net_margin ?? null,
+    })),
     [data]);
 
   const latest = data?.periods[data.periods.length - 1];
   const previous = data && data.periods.length >= 2 ? data.periods[data.periods.length - 2] : undefined;
-  const latestRevenue = metricValue(latest, "revenue");
-  const previousRevenue = metricValue(previous, "revenue");
+  const latestRevenue = metricValue(latest, "total_revenue");
+  const previousRevenue = metricValue(previous, "total_revenue");
   const latestEbitda = metricValue(latest, "ebitda");
   const latestFcf = metricValue(latest, "free_cash_flow");
   const latestMargin = latest?.ratios.operating_margin ?? null;
