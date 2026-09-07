@@ -28,6 +28,20 @@ def _serialize(doc: Document) -> DocumentOut:
     return DocumentOut.model_validate(doc)
 
 
+def _ensure_page_count(db: Session, doc: Document) -> None:
+    """Repair a READY document whose persisted page_count lags its extracted pages.
+
+    This also makes the read API resilient to a background-ingestion race: the
+    extracted pages are the source of truth for page-aware documents.
+    """
+    if doc.status != DocumentStatus.READY.value or doc.page_count:
+        return
+    count = db.query(DocumentPage).filter(DocumentPage.document_id == doc.id).count()
+    if count:
+        doc.page_count = count
+        db.commit()
+
+
 @router.post("/companies/{company_id}/documents", response_model=list[DocumentOut], status_code=201)
 async def upload_documents(company_id: str,
                            files: list[UploadFile] = File(...),
@@ -93,11 +107,15 @@ def list_documents(company_id: str, q: str | None = None,
         query = query.order_by(Document.filename)
     else:
         query = query.order_by(Document.created_at.desc())
-    return [_serialize(d) for d in query.all()]
+    documents = query.all()
+    for document in documents:
+        _ensure_page_count(db, document)
+    return [_serialize(d) for d in documents]
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOut)
 def get_document(db: Session = Depends(get_db), doc: Document = Depends(get_scoped_document)):
+    _ensure_page_count(db, doc)
     return _serialize(doc)
 
 
@@ -125,7 +143,8 @@ def reprocess_document(db: Session = Depends(get_db), doc: Document = Depends(ge
 
 
 @router.get("/documents/{document_id}/status", response_model=DocumentStatusOut)
-def document_status(doc: Document = Depends(get_scoped_document)):
+def document_status(db: Session = Depends(get_db), doc: Document = Depends(get_scoped_document)):
+    _ensure_page_count(db, doc)
     progress = 100 if doc.status == DocumentStatus.READY.value else 0
     return DocumentStatusOut(id=doc.id, status=doc.status, page_count=doc.page_count,
                              error_message=doc.error_message, progress=progress)
