@@ -18,7 +18,7 @@ from app.utils.text import normalize_ws
 
 # metric -> label patterns (checked in order; first match wins per line)
 METRIC_LABELS: dict[str, list[str]] = {
-    "total_revenue": [r"total\s+revenue", r"net\s+revenues?", r"^revenues?$", r"net\s+sales", r"total\s+net\s+sales", r"^fy\d{4}\s+revenue\b", r"\brevenue\b(?!\s+(?:growth|share|guidance))"],
+    "total_revenue": [r"total\s+revenues?", r"net\s+revenues?", r"^revenues?$", r"net\s+sales", r"total\s+sales", r"^sales?$", r"total\s+net\s+sales", r"^fy\d{4}\s+revenues?\b", r"\brevenues?\b(?!\s+(?:growth|share|guidance))"],
     "cogs": [r"costs?\s+of\s+(?:goods\s+)?(?:revenues?|sales|products\s+sold)", r"^cogs$"],
     "gross_profit": [r"gross\s+(?:profit|margin)\b"],
     "operating_income": [r"operating\s+(?:income|profit)", r"income\s+from\s+operations"],
@@ -31,7 +31,7 @@ METRIC_LABELS: dict[str, list[str]] = {
     "total_liabilities": [r"total\s+liabilities"],
     "total_debt": [r"total\s+debt", r"total\s+(?:long[- ]term\s+)?(?:debt|borrowings)", r"^debt$"],
     "shareholders_equity": [r"total\s+(?:share|stock)holders?['\u2019']?\s+equity", r"shareholders?['\u2019']?\s+equity", r"stockholders?['\u2019']?\s+equity"],
-    "operating_cash_flow": [r"net\s+cash\s+(?:provided\s+by|from|used\s+in)\s+operating\s+activities", r"operating\s+cash\s+flow"],
+    "operating_cash_flow": [r"net\s+cash\s+(?:(?:provided|generated)\s+by|from|used\s+in)\s+operating\s+activities", r"cash\s+flow\s+from\s+operating\s+activities", r"cash\s+from\s+operations", r"operating\s+cash\s+flow"],
     "capital_expenditure": [r"capital\s+expenditure", r"purchases?\s+of\s+(?:property|pp&e)"],
     "free_cash_flow": [r"free\s+cash\s+flow"],
     "accounts_receivable": [r"accounts?\s+receivable"],
