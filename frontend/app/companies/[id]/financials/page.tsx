@@ -5,7 +5,7 @@ import { Card, CardHeader, EmptyState, ErrorState, LoadingState, Select, Table }
 import { FinancialChart } from "@/components/FinancialChart";
 import { useApiData } from "@/hooks/useApi";
 import { fmtDelta, fmtMoney, fmtNumber, fmtPct, titleCase } from "@/lib/format";
-import type { Changes, Financials } from "@/types";
+import type { Changes, FinancialPeriodItem, Financials } from "@/types";
 
 const CHARTS: { title: string; subtitle: string; series: { key: string; label: string }[]; money?: boolean }[] = [
   { title: "Revenue", subtitle: "Total revenue per fiscal period", series: [{ key: "revenue", label: "Revenue" }], money: true },
@@ -16,6 +16,10 @@ const CHARTS: { title: string; subtitle: string; series: { key: string; label: s
   { title: "Debt & cash", subtitle: "Total debt vs cash", series: [{ key: "debt", label: "Total debt" }, { key: "cash", label: "Cash" }], money: true },
   { title: "Cash flow", subtitle: "Operating vs free cash flow", series: [{ key: "operating_cash_flow", label: "OCF" }, { key: "free_cash_flow", label: "FCF" }], money: true },
 ];
+
+function metricValue(period: FinancialPeriodItem | undefined, metric: string): number | null {
+  return period?.metrics.find((item) => item.metric === metric)?.value ?? null;
+}
 
 export default function FinancialsPage({ params }: { params: { id: string } }) {
   const companyId = params.id;
@@ -38,12 +42,13 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
 
   const latest = data?.periods[data.periods.length - 1];
   const previous = data && data.periods.length >= 2 ? data.periods[data.periods.length - 2] : null;
-  const latestRevenue = latest?.metrics.revenue ?? null;
-  const latestEbitda = latest?.metrics.ebitda ?? null;
-  const latestFcf = latest?.metrics.free_cash_flow ?? null;
+  const latestRevenue = metricValue(latest, "revenue");
+  const previousRevenue = metricValue(previous, "revenue");
+  const latestEbitda = metricValue(latest, "ebitda");
+  const latestFcf = metricValue(latest, "free_cash_flow");
   const latestMargin = latest?.ratios.operating_margin ?? null;
-  const revenueDelta = latestRevenue != null && previous?.metrics.revenue != null && previous.metrics.revenue !== 0
-    ? ((latestRevenue - previous.metrics.revenue) / Math.abs(previous.metrics.revenue)) * 100 : null;
+  const revenueDelta = latestRevenue != null && previousRevenue != null && previousRevenue !== 0
+    ? ((latestRevenue - previousRevenue) / Math.abs(previousRevenue)) * 100 : null;
   const debtToEbitda = latest?.ratios.debt_to_ebitda ?? null;
 
   if (loading) return <LoadingState label="Loading financials…" />;
