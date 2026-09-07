@@ -41,7 +41,7 @@ export default function FinancialsPage({ params }: { params: { id: string } }) {
     [data]);
 
   const latest = data?.periods[data.periods.length - 1];
-  const previous = data && data.periods.length >= 2 ? data.periods[data.periods.length - 2] : null;
+  const previous = data && data.periods.length >= 2 ? data.periods[data.periods.length - 2] : undefined;
   const latestRevenue = metricValue(latest, "revenue");
   const previousRevenue = metricValue(previous, "revenue");
   const latestEbitda = metricValue(latest, "ebitda");
